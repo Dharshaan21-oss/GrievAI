@@ -1,0 +1,29 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Node
+node_modules/
+dist/
+build/
+
+# ML models (handled separately - too large for git)
+*.pt
+*.pkl
+*.bin
+*.safetensors
+ml_pipeline/models/
+ml_pipeline/data/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
