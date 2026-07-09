@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    container_name: grievai_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: grievai_user
+      POSTGRES_PASSWORD: grievai_pass
+      POSTGRES_DB: grievai_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - grievai_pgdata:/var/lib/postgresql/data
+
+volumes:
+  grievai_pgdata:
