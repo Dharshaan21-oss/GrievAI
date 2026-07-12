@@ -10,6 +10,7 @@ from app.models.user import User
 from app.schemas.grievance import GrievanceCreate, GrievanceOut, GrievanceStatusUpdate
 from app.api.deps import get_current_user
 from app.ml_service import process_new_grievance, add_to_index
+from sqlalchemy import func
 
 router = APIRouter(prefix="/api/grievances", tags=["Grievances"])
 
@@ -71,6 +72,38 @@ def create_grievance(
     db.commit()
 
     return grievance
+
+@router.get("/stats/summary")
+def get_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role.value not in ("official", "admin"):
+        raise HTTPException(status_code=403, detail="Only officials or admins can view stats")
+
+    total = db.query(Grievance).count()
+    resolved = db.query(Grievance).filter(Grievance.status == GrievanceStatus.resolved).count()
+    critical = db.query(Grievance).filter(Grievance.priority == PriorityLevel.critical).count()
+
+    by_category = (
+        db.query(Grievance.category, func.count(Grievance.id))
+        .filter(Grievance.category.isnot(None))
+        .group_by(Grievance.category)
+        .all()
+    )
+    by_status = (
+        db.query(Grievance.status, func.count(Grievance.id))
+        .group_by(Grievance.status)
+        .all()
+    )
+
+    return {
+        "total": total,
+        "resolved": resolved,
+        "critical": critical,
+        "by_category": [{"category": c, "count": n} for c, n in by_category],
+        "by_status": [{"status": s.value, "count": n} for s, n in by_status],
+    }
 
 
 @router.get("/", response_model=List[GrievanceOut])

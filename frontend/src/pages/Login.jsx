@@ -11,18 +11,22 @@ export default function Login() {
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      await login(email, password)
+  e.preventDefault()
+  setError('')
+  setLoading(true)
+  try {
+    const userData = await login(email, password)
+    if (['official', 'admin'].includes(userData.role)) {
+      navigate('/admin')
+    } else {
       navigate('/dashboard')
-    } catch (err) {
-      setError('Invalid email or password')
-    } finally {
-      setLoading(false)
     }
+  } catch (err) {
+    setError('Invalid email or password')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

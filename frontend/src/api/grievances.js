@@ -15,3 +15,6 @@ export const getGrievance = (id) => {
 export const updateGrievanceStatus = (id, data) => {
   return apiClient.patch(`/api/grievances/${id}/status`, data)
 }
+export const getStats = () => {
+  return apiClient.get('/api/grievances/stats/summary')
+}
