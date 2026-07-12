@@ -1,26 +1,59 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { listGrievances } from '../api/grievances'
+import GrievanceForm from '../components/GrievanceForm'
+import GrievanceList from '../components/GrievanceList'
 
 export default function Dashboard() {
   const { user, logout } = useAuth()
+  const [grievances, setGrievances] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchGrievances = async () => {
+    setLoading(true)
+    try {
+      const res = await listGrievances()
+      setGrievances(res.data)
+    } catch (err) {
+      console.error('Failed to fetch grievances', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchGrievances()
+  }, [])
+
+  const handleCreated = (newGrievance) => {
+    setGrievances([newGrievance, ...grievances])
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-blue-600">Welcome, {user?.full_name}</h1>
-          <button
-            onClick={logout}
-            className="text-sm text-red-600 hover:underline"
-          >
-            Logout
-          </button>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+          <h1 className="text-xl font-bold text-blue-600">GrievAI</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              {user?.full_name} <span className="text-gray-400">({user?.role})</span>
+            </span>
+            <button onClick={logout} className="text-sm text-red-600 hover:underline">
+              Logout
+            </button>
+          </div>
         </div>
-        <p className="text-gray-600">Role: {user?.role}</p>
-        <p className="text-gray-600">Email: {user?.email}</p>
-        <p className="text-gray-400 mt-4 text-sm">
-          (Grievance form and list will go here in the next task)
-        </p>
-      </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <GrievanceForm onCreated={handleCreated} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 mb-4">My Grievances</h2>
+          <GrievanceList grievances={grievances} loading={loading} />
+        </div>
+      </main>
     </div>
   )
 }
