@@ -44,6 +44,8 @@ class Grievance(Base):
 
     ai_summary = Column(Text, nullable=True)
     location = Column(String, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     photo_path = Column(String, nullable=True)
 
     assigned_official_id = Column(Integer, ForeignKey("users.id"), nullable=True)

@@ -11,19 +11,35 @@ export default function GrievanceForm({ onCreated }) {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  e.preventDefault()
+  setError('')
+  setLoading(true)
+
+  let coords = {}
+  if (navigator.geolocation) {
     try {
-      const res = await createGrievance(form)
-      setForm({ title: '', description: '', location: '' })
-      onCreated(res.data)
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to submit grievance')
-    } finally {
-      setLoading(false)
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
+      })
+      coords = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      }
+    } catch (geoErr) {
+      console.warn('Location not available, submitting without coordinates')
     }
   }
+
+  try {
+    const res = await createGrievance({ ...form, ...coords })
+    setForm({ title: '', description: '', location: '' })
+    onCreated(res.data)
+  } catch (err) {
+    setError(err.response?.data?.detail || 'Failed to submit grievance')
+  } finally {
+    setLoading(false)
+  }
+}
 
   return (
     <div className="bg-white rounded-xl shadow p-6">

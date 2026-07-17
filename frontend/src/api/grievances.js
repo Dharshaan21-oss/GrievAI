@@ -18,3 +18,8 @@ export const updateGrievanceStatus = (id, data) => {
 export const getStats = () => {
   return apiClient.get('/api/grievances/stats/summary')
 }
+export const getNearbyGrievances = (lat, lng, radiusKm) => {
+  return apiClient.get('/api/grievances/nearby/feed', {
+    params: { lat, lng, radius_km: radiusKm },
+  })
+}

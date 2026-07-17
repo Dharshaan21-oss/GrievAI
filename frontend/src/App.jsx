@@ -5,6 +5,7 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import './App.css'
+import NearbyFeed from './pages/NearbyFeed'
 
 function ProtectedRoute({ children, requireStaff = false }) {
   const { user, loading } = useAuth()
@@ -36,6 +37,14 @@ function AppRoutes() {
             <Dashboard />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/nearby"
+        element={
+        <ProtectedRoute>
+          <NearbyFeed />
+          </ProtectedRoute>
+          }
       />
       <Route
         path="/admin"

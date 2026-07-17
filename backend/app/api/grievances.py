@@ -1,5 +1,7 @@
+import math
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 
 from app.db.session import get_db
@@ -10,7 +12,7 @@ from app.models.user import User
 from app.schemas.grievance import GrievanceCreate, GrievanceOut, GrievanceStatusUpdate
 from app.api.deps import get_current_user
 from app.ml_service import process_new_grievance, add_to_index
-from sqlalchemy import func
+from app.core.email_service import send_grievance_notification
 
 router = APIRouter(prefix="/api/grievances", tags=["Grievances"])
 
@@ -21,6 +23,7 @@ PRIORITY_MAP = {
     "critical": PriorityLevel.critical,
 }
 
+
 @router.post("/", response_model=GrievanceOut)
 def create_grievance(
     payload: GrievanceCreate,
@@ -29,10 +32,8 @@ def create_grievance(
 ):
     full_text = f"{payload.title}. {payload.description}"
 
-    # Run the full local AI pipeline
     ai_result = process_new_grievance(full_text)
 
-    # Try to match the predicted category to an existing department
     department = db.query(Department).filter(
         Department.name == ai_result["category"]
     ).first()
@@ -51,16 +52,15 @@ def create_grievance(
         duplicate_of_id=ai_result["duplicate_of_id"],
         ai_summary=ai_result["ai_summary"],
         location=payload.location,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
     )
     db.add(grievance)
     db.commit()
     db.refresh(grievance)
 
-    # Now that it has a real ID, add it to the duplicate-detection index
-    # so future grievances can be compared against it too
     add_to_index(grievance.id, full_text)
 
-    # Log initial status in history
     history = GrievanceStatusHistory(
         grievance_id=grievance.id,
         old_status=None,
@@ -71,7 +71,39 @@ def create_grievance(
     db.add(history)
     db.commit()
 
+    if department and department.email:
+        send_grievance_notification(department.email, grievance)
+
     return grievance
+
+def haversine_km(lat1, lon1, lat2, lon2):
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2
+         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
+    c = 2 * math.asin(math.sqrt(a))
+    return R * c
+
+
+@router.get("/nearby/feed", response_model=List[GrievanceOut])
+def nearby_grievances(
+    lat: float,
+    lng: float,
+    radius_km: float = 5,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    all_grievances = db.query(Grievance).filter(
+        Grievance.latitude.isnot(None),
+        Grievance.longitude.isnot(None),
+    ).order_by(Grievance.created_at.desc()).all()
+
+    nearby = [
+        g for g in all_grievances
+        if haversine_km(lat, lng, g.latitude, g.longitude) <= radius_km
+    ]
+    return nearby
 
 @router.get("/stats/summary")
 def get_stats(
@@ -115,7 +147,6 @@ def list_grievances(
 ):
     query = db.query(Grievance)
 
-    # Citizens only see their own grievances; officials/admins see all
     if current_user.role.value == "citizen":
         query = query.filter(Grievance.citizen_id == current_user.id)
 

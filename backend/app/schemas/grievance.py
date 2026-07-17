@@ -7,6 +7,8 @@ class GrievanceCreate(BaseModel):
     title: str
     description: str
     location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class GrievanceOut(BaseModel):
     id: int
@@ -24,6 +26,8 @@ class GrievanceOut(BaseModel):
     location: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     class Config:
         from_attributes = True
